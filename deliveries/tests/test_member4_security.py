@@ -246,3 +246,18 @@ class Member4AccessControlTests(TestCase):
                 rider=self.rider_peter,
                 confirmation_code="4821",
             )
+    def test_delivery_cannot_be_assigned_twice(self):
+        """An already assigned delivery must not be assigned to another rider."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        with self.assertRaises(ValidationError):
+            assign_rider(
+                delivery_id=self.delivery.id,
+                rider=self.rider_amina,
+                dispatcher=self.dispatcher,
+            )
