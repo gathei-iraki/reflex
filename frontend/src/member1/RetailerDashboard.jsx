@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { initialDeliveries } from '../shared/mockData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createDelivery, getDeliveries } from '../services/api';
 
 const EMPTY_FORM = {
   customerName: '',
@@ -84,19 +84,31 @@ function getField(delivery, ...names) {
 }
 
 export default function RetailerDashboard() {
-  const retailerId = 'RET-1';
-
-  const [deliveries, setDeliveries] = useState(() =>
-    (Array.isArray(initialDeliveries) ? initialDeliveries : []).filter(
-      (delivery) => delivery.retailerId === retailerId
-    )
-  );
+  const [deliveries, setDeliveries] = useState([]);
   const [view, setView] = useState('list');
   const [selectedDelivery, setSelectedDelivery] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [formError, setFormError] = useState('');
+  const [dashboardError, setDashboardError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const loadDeliveries = async () => {
+      try {
+        setDashboardError('');
+        setDeliveries(await getDeliveries());
+      } catch (error) {
+        setDashboardError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDeliveries();
+  }, []);
 
   const counts = useMemo(
     () => ({
@@ -147,7 +159,7 @@ export default function RetailerDashboard() {
     setView('list');
   };
 
-  const handleCreate = (event) => {
+  const handleCreate = async (event) => {
     event.preventDefault();
     setFormError('');
 
@@ -163,24 +175,17 @@ export default function RetailerDashboard() {
       return;
     }
 
-    const newDelivery = {
-      id: `DEL-${Date.now()}`,
-      retailerId,
-      ...values,
-      status: 'NEW',
-      assignedRiderId: null,
-      failureReason: null,
-      timeline: [
-        {
-          event: 'Delivery Created',
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
-    setDeliveries((current) => [newDelivery, ...current]);
-    setForm(EMPTY_FORM);
-    setView('list');
+    try {
+      setSubmitting(true);
+      const delivery = await createDelivery(values);
+      setDeliveries((current) => [delivery, ...current]);
+      setForm(EMPTY_FORM);
+      setView('list');
+    } catch (error) {
+      setFormError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -204,6 +209,15 @@ export default function RetailerDashboard() {
           {view === 'create' ? 'View My Deliveries' : '+ Create Delivery'}
         </button>
       </header>
+
+      {dashboardError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {dashboardError}
+        </div>
+      )}
 
       {view === 'create' ? (
         <form
@@ -306,9 +320,10 @@ export default function RetailerDashboard() {
             </button>
             <button
               type="submit"
+              disabled={submitting}
               className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
             >
-              Submit Request
+              {submitting ? 'Submitting…' : 'Submit Request'}
             </button>
           </div>
         </form>
@@ -359,7 +374,11 @@ export default function RetailerDashboard() {
               </div>
             </div>
 
-            {filteredDeliveries.length === 0 ? (
+            {loading ? (
+              <div className="px-6 py-14 text-center text-sm text-gray-500">
+                Loading deliveries…
+              </div>
+            ) : filteredDeliveries.length === 0 ? (
               <div className="px-6 py-14 text-center">
                 <h3 className="font-semibold text-gray-900">
                   No deliveries found
@@ -466,7 +485,9 @@ function DeliveryDetails({ delivery, onBack }) {
     'itemDescription',
     'item_description'
   );
-  const riderName = getField(delivery, 'assignedRiderName', 'assigned_rider_name');
+  const riderName = getField(delivery, 'assignedRiderName', 'assigned_rider_name', 'rider_name');
+  const failureReason = getField(delivery, 'failureReason', 'failure_reason');
+  const failureNotes = getField(delivery, 'failureNotes', 'failure_notes');
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -501,17 +522,17 @@ function DeliveryDetails({ delivery, onBack }) {
           />
         </dl>
 
-        {delivery.failureReason && (
+        {failureReason && (
           <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
             <p className="text-sm font-semibold text-red-800">
               Delivery failed
             </p>
             <p className="mt-1 text-sm text-red-700">
-              Reason: {delivery.failureReason}
+              Reason: {failureReason}
             </p>
-            {delivery.failureNotes && (
+            {failureNotes && (
               <p className="mt-1 text-sm text-red-700">
-                {delivery.failureNotes}
+                {failureNotes}
               </p>
             )}
           </div>
