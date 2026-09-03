@@ -1,8 +1,8 @@
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
 from django.urls import reverse
 
-from deliveries.models import Delivery, TeamMember
+from deliveries.models import Delivery, DeliveryEvent, TeamMember
 from deliveries.services import (
     assign_rider,
     mark_delivered,
@@ -150,6 +150,7 @@ class Member4AccessControlTests(TestCase):
                 rider=self.rider_peter,
                 failure_reason="",
             )
+
     def test_failed_delivery_records_reason_and_audit_event(self):
         """A valid failed delivery should record the reason and actor."""
 
@@ -187,6 +188,7 @@ class Member4AccessControlTests(TestCase):
             event.status,
             Delivery.Status.DELIVERY_FAILED,
         )
+
     def test_delivered_delivery_records_proof_and_audit_event(self):
         """A completed delivery should record proof and accountability details."""
 
@@ -247,6 +249,7 @@ class Member4AccessControlTests(TestCase):
                 rider=self.rider_peter,
                 confirmation_code="4821",
             )
+
     def test_delivery_cannot_be_assigned_twice(self):
         """An already assigned delivery must not be assigned to another rider."""
 
@@ -262,6 +265,7 @@ class Member4AccessControlTests(TestCase):
                 rider=self.rider_amina,
                 dispatcher=self.dispatcher,
             )
+
     def test_inactive_rider_cannot_be_assigned(self):
         """A dispatcher must not assign a delivery to an inactive rider."""
 
@@ -277,6 +281,7 @@ class Member4AccessControlTests(TestCase):
                 rider=inactive_rider,
                 dispatcher=self.dispatcher,
             )
+
     def test_retailer_gets_403_when_using_assignment_endpoint(self):
         """A retailer should be forbidden from using the dispatcher assignment API."""
 
@@ -300,6 +305,7 @@ class Member4AccessControlTests(TestCase):
             response.status_code,
             403,
         )
+
     def test_rider_cannot_view_another_riders_delivery(self):
         """A rider should receive 403 when viewing another rider's delivery."""
 
@@ -325,6 +331,7 @@ class Member4AccessControlTests(TestCase):
             response.status_code,
             403,
         )
+
     def test_assigned_rider_can_view_their_delivery(self):
         """The assigned rider should be able to view their own delivery."""
 
@@ -349,6 +356,7 @@ class Member4AccessControlTests(TestCase):
             response.status_code,
             200,
         )
+
     def test_wrong_rider_cannot_pick_up_delivery_via_api(self):
         """A rider should not update another rider's delivery through the API."""
 
@@ -387,6 +395,7 @@ class Member4AccessControlTests(TestCase):
             self.delivery.assigned_rider,
             self.rider_peter,
         )
+
     def test_assigned_rider_can_pick_up_delivery_via_api(self):
         """The assigned rider should be able to pick up their delivery through the API."""
 
@@ -418,6 +427,7 @@ class Member4AccessControlTests(TestCase):
             self.delivery.status,
             Delivery.Status.PICKED_UP,
         )
+
     def test_successful_delivery_creates_full_audit_timeline(self):
         """A completed delivery should keep a full ordered audit trail."""
 
@@ -430,7 +440,6 @@ class Member4AccessControlTests(TestCase):
             status=Delivery.Status.NEW,
         )
 
-        from deliveries.models import DeliveryEvent
 
         DeliveryEvent.objects.create(
             delivery=delivery,
@@ -469,6 +478,7 @@ class Member4AccessControlTests(TestCase):
                 Delivery.Status.DELIVERED,
             ],
         )
+
     def test_failed_delivery_creates_full_audit_timeline(self):
         """A failed delivery should keep a full ordered audit trail."""
 
@@ -481,7 +491,6 @@ class Member4AccessControlTests(TestCase):
             status=Delivery.Status.NEW,
         )
 
-        from deliveries.models import DeliveryEvent
 
         DeliveryEvent.objects.create(
             delivery=delivery,
@@ -515,6 +524,7 @@ class Member4AccessControlTests(TestCase):
                 Delivery.Status.DELIVERY_FAILED,
             ],
         )
+
     def test_other_failure_reason_requires_notes(self):
         """The OTHER failure reason must include explanatory notes."""
 
@@ -531,6 +541,7 @@ class Member4AccessControlTests(TestCase):
                 failure_reason=Delivery.FailureReason.OTHER,
                 failure_notes="",
             )
+
     def test_other_failure_reason_accepts_notes(self):
         """OTHER should be accepted when explanatory notes are provided."""
 
