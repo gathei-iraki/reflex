@@ -300,3 +300,52 @@ class Member4AccessControlTests(TestCase):
             response.status_code,
             403,
         )
+    def test_rider_cannot_view_another_riders_delivery(self):
+        """A rider should receive 403 when viewing another rider's delivery."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        # Log in to the demo session as Amina, not Peter.
+        session = self.client.session
+        session["team_member_id"] = self.rider_amina.id
+        session.save()
+
+        url = reverse(
+            "deliveries:delivery-detail",
+            kwargs={"delivery_id": self.delivery.id},
+        )
+
+        response = self.client.get(url)
+
+        self.assertEqual(
+            response.status_code,
+            403,
+        )
+    def test_assigned_rider_can_view_their_delivery(self):
+        """The assigned rider should be able to view their own delivery."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        session = self.client.session
+        session["team_member_id"] = self.rider_peter.id
+        session.save()
+
+        url = reverse(
+            "deliveries:delivery-detail",
+            kwargs={"delivery_id": self.delivery.id},
+        )
+
+        response = self.client.get(url)
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
