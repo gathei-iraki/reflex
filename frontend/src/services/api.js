@@ -1,4 +1,16 @@
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')
+
+async function readJson(response) {
+  const contentType = response.headers.get('content-type') || ''
+
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      `API returned ${contentType || 'an unknown content type'} instead of JSON (${response.status})`,
+    )
+  }
+
+  return response.json()
+}
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_URL}${path}`, {
@@ -11,14 +23,15 @@ async function request(path, options = {}) {
   })
 
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}))
+    const data = await readJson(response).catch(() => ({}))
     throw new Error(data.detail || 'Request failed')
   }
 
-  return response.status === 204 ? null : response.json()
+  return response.status === 204 ? null : readJson(response)
 }
 
-export const getTeamMembers = () => request('/team-members/')
+export const getTeamMembers = (role) =>
+  request(`/team-members/${role ? `?role=${encodeURIComponent(role)}` : ''}`)
 
 export const selectMember = (memberId) =>
   request('/session/select-member/', {
@@ -38,7 +51,8 @@ export const createDelivery = (form) =>
       item_description: form.itemDescription,
     }),
   })
-  export const getNewDeliveries = () =>
+
+export const getNewDeliveries = () =>
   request('/deliveries/?status=NEW')
 
 export const getRiderWorkload = () =>
@@ -49,7 +63,8 @@ export const assignRider = (deliveryId, riderId) =>
     method: 'POST',
     body: JSON.stringify({ rider_id: riderId }),
   })
-  export const getRiderDeliveries = () =>
+
+export const getRiderDeliveries = () =>
   request('/deliveries/')
 
 export const markPickedUp = (deliveryId) =>

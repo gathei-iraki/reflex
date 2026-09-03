@@ -3,6 +3,7 @@ import Layout from './shared/Layout.jsx'
 import RetailerDashboard from './member1/RetailerDashboard.jsx'
 import DispatcherDashboard from './member2/DispatcherDashboard.jsx'
 import RiderDashboard from './rider/RiderDashboard.jsx'
+import { getTeamMembers, selectMember } from './services/api.js'
 
 const roles = [
   {
@@ -28,7 +29,7 @@ const roles = [
   },
 ]
 
-function RolePicker({ onChoose }) {
+function RolePicker({ error, onChoose, selectingRole }) {
   return (
     <main className="min-h-screen bg-slate-950 px-5 py-10 text-white sm:flex sm:items-center sm:justify-center">
       <div className="w-full max-w-5xl">
@@ -49,6 +50,7 @@ function RolePicker({ onChoose }) {
               key={role.key}
               type="button"
               onClick={() => onChoose(role.key)}
+              disabled={Boolean(selectingRole)}
               className="group rounded-3xl border border-slate-800 bg-slate-900 p-7 text-left transition hover:-translate-y-1 hover:border-slate-600 hover:bg-slate-800"
             >
               <span className={`mb-12 grid h-12 w-12 place-items-center rounded-2xl text-xl font-bold ${role.color}`}>
@@ -57,11 +59,16 @@ function RolePicker({ onChoose }) {
               <h2 className="text-xl font-bold">{role.title}</h2>
               <p className="mt-2 min-h-12 text-sm leading-6 text-slate-400">{role.description}</p>
               <span className="mt-6 inline-block text-sm font-semibold text-blue-300 group-hover:text-white">
-                Open workspace →
+                {selectingRole === role.key ? 'Opening workspace…' : 'Open workspace →'}
               </span>
             </button>
           ))}
         </div>
+        {error && (
+          <p className="mx-auto mt-6 max-w-xl rounded-xl bg-rose-950 px-4 py-3 text-center text-sm text-rose-200">
+            {error}
+          </p>
+        )}
       </div>
     </main>
   )
@@ -69,13 +76,41 @@ function RolePicker({ onChoose }) {
 
 function App() {
   const [role, setRole] = useState(null)
+  const [selectingRole, setSelectingRole] = useState(null)
+  const [selectionError, setSelectionError] = useState('')
+
+  const chooseRole = async (nextRole) => {
+    try {
+      setSelectingRole(nextRole)
+      setSelectionError('')
+
+      const members = await getTeamMembers(nextRole.toUpperCase())
+      const member = members.find(
+        (candidate) => candidate.name === `Demo ${nextRole[0].toUpperCase()}${nextRole.slice(1)}`,
+      ) || members[0]
+
+      if (!member) {
+        throw new Error(`No active ${nextRole} team member is configured.`)
+      }
+
+      await selectMember(member.id)
+      setRole(nextRole)
+    } catch (error) {
+      setSelectionError(error.message)
+    } finally {
+      setSelectingRole(null)
+    }
+  }
 
   if (!role) {
-    return <RolePicker onChoose={setRole} />
+    return (
+      <RolePicker
+        error={selectionError}
+        onChoose={chooseRole}
+        selectingRole={selectingRole}
+      />
+    )
   }
-}
-useEffect(() => {
-  if (!role) return
 
   const dashboard = {
     retailer: <RetailerDashboard />,
@@ -84,7 +119,12 @@ useEffect(() => {
   }[role]
 
   return (
-    <Layout currentRole={role} onRoleChange={setRole}>
+    <Layout
+      currentRole={role}
+      error={selectionError}
+      onRoleChange={chooseRole}
+      selectingRole={selectingRole}
+    >
       {dashboard}
     </Layout>
   )
