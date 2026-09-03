@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 
 from deliveries.models import Delivery, TeamMember
 from deliveries.services import (
@@ -276,3 +277,26 @@ class Member4AccessControlTests(TestCase):
                 rider=inactive_rider,
                 dispatcher=self.dispatcher,
             )
+    def test_retailer_gets_403_when_using_assignment_endpoint(self):
+        """A retailer should be forbidden from using the dispatcher assignment API."""
+
+        session = self.client.session
+        session["team_member_id"] = self.retailer.id
+        session.save()
+
+        url = reverse(
+            "deliveries:assign-rider",
+            kwargs={"delivery_id": self.delivery.id},
+        )
+
+        response = self.client.post(
+            url,
+            {
+                "rider_id": self.rider_peter.id,
+            },
+        )
+
+        self.assertEqual(
+            response.status_code,
+            403,
+        )
