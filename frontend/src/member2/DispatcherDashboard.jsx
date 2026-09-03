@@ -65,21 +65,7 @@ export default function DispatcherDashboard({
               Assign each new delivery to an available rider.
             </p>
           </div>
-<div className="flex gap-2">
-  <button
-    onClick={onGoToRetailer}
-    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-  >
-    Main dashboard
-  </button>
 
-  <button
-    onClick={onSwitchRole}
-    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
-  >
-    Switch role
-  </button>
-</div>
           
         </header>
 
