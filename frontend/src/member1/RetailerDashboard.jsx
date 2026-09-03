@@ -46,34 +46,6 @@ function StatusBadge({ status }) {
   );
 }
 
-function formatDate(value) {
-  if (!value) return '—';
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      });
-}
-
-function getTimeline(delivery) {
-  if (Array.isArray(delivery.timeline)) return delivery.timeline;
-  if (Array.isArray(delivery.events)) {
-    return delivery.events.map((event) => ({
-      event:
-        event.event ||
-        event.status ||
-        event.note ||
-        'Delivery updated',
-      timestamp: event.timestamp || event.createdAt || event.created_at,
-      note: event.note,
-    }));
-  }
-  return [];
-}
-
 function getField(delivery, ...names) {
   for (const name of names) {
     if (delivery?.[name] !== undefined && delivery?.[name] !== null) {
@@ -476,7 +448,6 @@ function MetricCard({ label, value }) {
 }
 
 function DeliveryDetails({ delivery, onBack }) {
-  const timeline = getTimeline(delivery);
   const customerName = getField(delivery, 'customerName', 'customer_name');
   const phone = getField(delivery, 'phone', 'customerPhone', 'customer_phone');
   const address = getField(delivery, 'address', 'deliveryAddress', 'delivery_address');
@@ -490,8 +461,8 @@ function DeliveryDetails({ delivery, onBack }) {
   const failureNotes = getField(delivery, 'failureNotes', 'failure_notes');
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <article className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+    <div className="mx-auto flex w-full max-w-4xl justify-center px-2 py-4 sm:px-4">
+      <article className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
         <button
           type="button"
           onClick={onBack}
@@ -500,8 +471,8 @@ function DeliveryDetails({ delivery, onBack }) {
           ← Back to deliveries
         </button>
 
-        <div className="flex flex-col gap-3 border-b border-gray-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+        <div className="flex flex-col items-center gap-3 border-b border-gray-100 pb-6 text-center">
+          <div className="flex flex-col items-center">
             <p className="text-sm text-gray-500">Delivery</p>
             <h2 className="mt-1 text-2xl font-bold text-gray-900">
               #{delivery.id}
@@ -510,7 +481,7 @@ function DeliveryDetails({ delivery, onBack }) {
           <StatusBadge status={delivery.status} />
         </div>
 
-        <dl className="mt-6 grid gap-5 sm:grid-cols-2">
+        <dl className="mx-auto mt-6 grid max-w-2xl gap-6 sm:grid-cols-2">
           <Detail label="Customer" value={customerName} />
           <Detail label="Phone" value={phone} />
           <Detail label="Delivery address" value={address} />
@@ -523,7 +494,7 @@ function DeliveryDetails({ delivery, onBack }) {
         </dl>
 
         {failureReason && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
+          <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-red-200 bg-red-50 p-4 text-center">
             <p className="text-sm font-semibold text-red-800">
               Delivery failed
             </p>
@@ -538,36 +509,6 @@ function DeliveryDetails({ delivery, onBack }) {
           </div>
         )}
       </article>
-
-      <aside className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">Delivery timeline</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Recorded delivery lifecycle events
-        </p>
-
-        {timeline.length === 0 ? (
-          <p className="mt-6 text-sm text-gray-500">No timeline events available.</p>
-        ) : (
-          <ol className="relative mt-6 border-l border-gray-200">
-            {timeline.map((event, index) => (
-              <li key={`${event.timestamp || 'event'}-${index}`} className="mb-7 ml-5 last:mb-0">
-                <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full bg-blue-600 ring-4 ring-white" />
-                <p className="text-sm font-semibold text-gray-900">
-                  {event.event || event.status || 'Delivery updated'}
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  {formatDate(event.timestamp)}
-                </p>
-                {event.note && (
-                  <p className="mt-2 text-sm leading-5 text-gray-600">
-                    {event.note}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </aside>
     </div>
   );
 }

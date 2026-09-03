@@ -65,21 +65,7 @@ export default function DispatcherDashboard({
               Assign each new delivery to an available rider.
             </p>
           </div>
-<div className="flex gap-2">
-  <button
-    onClick={onGoToRetailer}
-    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-  >
-    Main dashboard
-  </button>
 
-  <button
-    onClick={onSwitchRole}
-    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
-  >
-    Switch role
-  </button>
-</div>
           
         </header>
 
@@ -192,17 +178,24 @@ export default function DispatcherDashboard({
               Choose an active rider.
             </p>
 
-            <div className="mt-5 space-y-2">
-              {riders.map((rider) => (
+            <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 divide-y divide-slate-200">
+              {riders.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500">No active riders are available.</p>
+              ) : riders.map((rider) => (
                 <button
                   key={rider.id}
+                  type="button"
                   onClick={() => handleAssign(rider.id)}
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-4 text-left hover:bg-violet-50"
+                  className="group flex w-full cursor-pointer items-center gap-3 bg-white p-4 text-left transition hover:bg-violet-50 focus:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-500"
                 >
-                  <span className="font-semibold">{rider.name}</span>
-                  <span className="text-sm text-slate-500">
-                    {rider.active_deliveries} active
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-violet-100 font-bold text-violet-700 group-hover:bg-violet-600 group-hover:text-white">
+                    {rider.name.charAt(0).toUpperCase()}
                   </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-semibold text-slate-900 group-hover:text-violet-800">{rider.name}</span>
+                    <span className="block text-sm text-slate-500">{rider.active_deliveries} active deliveries</span>
+                  </span>
+                  <span className="text-sm font-semibold text-violet-600">Assign →</span>
                 </button>
               ))}
             </div>
