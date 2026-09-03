@@ -261,3 +261,18 @@ class Member4AccessControlTests(TestCase):
                 rider=self.rider_amina,
                 dispatcher=self.dispatcher,
             )
+    def test_inactive_rider_cannot_be_assigned(self):
+        """A dispatcher must not assign a delivery to an inactive rider."""
+
+        inactive_rider = TeamMember.objects.create(
+            name="Inactive Rider",
+            role=TeamMember.Role.RIDER,
+            is_active=False,
+        )
+
+        with self.assertRaises(ValidationError):
+            assign_rider(
+                delivery_id=self.delivery.id,
+                rider=inactive_rider,
+                dispatcher=self.dispatcher,
+            )
