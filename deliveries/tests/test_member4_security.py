@@ -515,3 +515,49 @@ class Member4AccessControlTests(TestCase):
                 Delivery.Status.DELIVERY_FAILED,
             ],
         )
+    def test_other_failure_reason_requires_notes(self):
+        """The OTHER failure reason must include explanatory notes."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        with self.assertRaises(ValidationError):
+            mark_failed(
+                delivery_id=self.delivery.id,
+                rider=self.rider_peter,
+                failure_reason=Delivery.FailureReason.OTHER,
+                failure_notes="",
+            )
+    def test_other_failure_reason_accepts_notes(self):
+        """OTHER should be accepted when explanatory notes are provided."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        delivery = mark_failed(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            failure_reason=Delivery.FailureReason.OTHER,
+            failure_notes="Customer requested delivery on another day.",
+        )
+
+        self.assertEqual(
+            delivery.status,
+            Delivery.Status.DELIVERY_FAILED,
+        )
+
+        self.assertEqual(
+            delivery.failure_reason,
+            Delivery.FailureReason.OTHER,
+        )
+
+        self.assertEqual(
+            delivery.failure_notes,
+            "Customer requested delivery on another day.",
+        )
