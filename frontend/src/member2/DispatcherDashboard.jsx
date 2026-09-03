@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   assignRider,
+  getFailedDeliveries,
   getNewDeliveries,
   getRiderWorkload,
 } from '../services/api'
@@ -11,6 +12,7 @@ export default function DispatcherDashboard({
 }) {
   const [deliveries, setDeliveries] = useState([])
   const [riders, setRiders] = useState([])
+  const [failedDeliveries, setFailedDeliveries] = useState([])
   const [selectedDelivery, setSelectedDelivery] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -20,13 +22,15 @@ export default function DispatcherDashboard({
       setLoading(true)
       setError('')
 
-      const [deliveryData, riderData] = await Promise.all([
+      const [deliveryData, riderData, failedDeliveryData] = await Promise.all([
         getNewDeliveries(),
         getRiderWorkload(),
+        getFailedDeliveries(),
       ])
 
       setDeliveries(deliveryData)
       setRiders(riderData)
+      setFailedDeliveries(failedDeliveryData)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -140,6 +144,37 @@ export default function DispatcherDashboard({
                   >
                     Assign rider
                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="border-b border-slate-100 p-5">
+            <h2 className="font-bold text-rose-700">Failed deliveries ({failedDeliveries.length})</h2>
+          </div>
+
+          {loading ? (
+            <p className="p-6 text-sm text-slate-500">Loading failed deliveries…</p>
+          ) : failedDeliveries.length === 0 ? (
+            <p className="p-6 text-sm text-slate-500">No failed deliveries.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {failedDeliveries.map((delivery) => (
+                <div key={delivery.id} className="p-5">
+                  <div className="flex flex-col justify-between gap-2 sm:flex-row">
+                    <div>
+                      <p className="font-semibold">Delivery #{delivery.id} · {delivery.customer_name}</p>
+                      <p className="mt-1 text-sm text-slate-500">{delivery.delivery_address}</p>
+                    </div>
+                    <span className="h-fit rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">Delivery failed</span>
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-rose-700">
+                    Reason: {delivery.failure_reason.replaceAll('_', ' ').toLowerCase()}
+                  </p>
+                  {delivery.failure_notes && <p className="mt-1 text-sm text-slate-600">{delivery.failure_notes}</p>}
+                  <p className="mt-2 text-xs text-slate-400">Rider: {delivery.rider_name || 'Unknown'}</p>
                 </div>
               ))}
             </div>

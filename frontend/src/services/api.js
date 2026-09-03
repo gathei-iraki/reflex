@@ -55,6 +55,9 @@ export const createDelivery = (form) =>
 export const getNewDeliveries = () =>
   request('/deliveries/?status=NEW')
 
+export const getFailedDeliveries = () =>
+  request('/deliveries/?status=DELIVERY_FAILED')
+
 export const getRiderWorkload = () =>
   request('/riders/workload/')
 
@@ -70,4 +73,19 @@ export const getRiderDeliveries = () =>
 export const markPickedUp = (deliveryId) =>
   request(`/deliveries/${deliveryId}/pick-up/`, {
     method: 'POST',
+  })
+
+export const markDelivered = (deliveryId, confirmationCode) =>
+  request(`/deliveries/${deliveryId}/complete/`, {
+    method: 'POST',
+    body: JSON.stringify({ confirmation_code: confirmationCode }),
+  })
+
+export const markFailed = (deliveryId, failureReason, failureNotes) =>
+  request(`/deliveries/${deliveryId}/fail/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      failure_reason: failureReason,
+      failure_notes: failureNotes,
+    }),
   })
