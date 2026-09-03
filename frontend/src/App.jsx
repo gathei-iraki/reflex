@@ -73,6 +73,9 @@ function App() {
   if (!role) {
     return <RolePicker onChoose={setRole} />
   }
+}
+useEffect(() => {
+  if (!role) return
 
   const dashboard = {
     retailer: <RetailerDashboard />,
