@@ -418,3 +418,100 @@ class Member4AccessControlTests(TestCase):
             self.delivery.status,
             Delivery.Status.PICKED_UP,
         )
+    def test_successful_delivery_creates_full_audit_timeline(self):
+        """A completed delivery should keep a full ordered audit trail."""
+
+        delivery = Delivery.objects.create(
+            retailer=self.retailer,
+            customer_name="Timeline Customer",
+            customer_phone="0711111111",
+            delivery_address="Nairobi",
+            item_description="Timeline Package",
+            status=Delivery.Status.NEW,
+        )
+
+        from deliveries.models import DeliveryEvent
+
+        DeliveryEvent.objects.create(
+            delivery=delivery,
+            actor=self.retailer,
+            status=Delivery.Status.NEW,
+            note="Delivery request created.",
+        )
+
+        assign_rider(
+            delivery_id=delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        mark_picked_up(
+            delivery_id=delivery.id,
+            rider=self.rider_peter,
+        )
+
+        mark_delivered(
+            delivery_id=delivery.id,
+            rider=self.rider_peter,
+            confirmation_code="4821",
+        )
+
+        statuses = list(
+            delivery.events.values_list("status", flat=True)
+        )
+
+        self.assertEqual(
+            statuses,
+            [
+                Delivery.Status.NEW,
+                Delivery.Status.ASSIGNED,
+                Delivery.Status.PICKED_UP,
+                Delivery.Status.DELIVERED,
+            ],
+        )
+    def test_failed_delivery_creates_full_audit_timeline(self):
+        """A failed delivery should keep a full ordered audit trail."""
+
+        delivery = Delivery.objects.create(
+            retailer=self.retailer,
+            customer_name="Failed Timeline Customer",
+            customer_phone="0722222222",
+            delivery_address="Nairobi",
+            item_description="Failed Timeline Package",
+            status=Delivery.Status.NEW,
+        )
+
+        from deliveries.models import DeliveryEvent
+
+        DeliveryEvent.objects.create(
+            delivery=delivery,
+            actor=self.retailer,
+            status=Delivery.Status.NEW,
+            note="Delivery request created.",
+        )
+
+        assign_rider(
+            delivery_id=delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        mark_failed(
+            delivery_id=delivery.id,
+            rider=self.rider_peter,
+            failure_reason=Delivery.FailureReason.CUSTOMER_UNAVAILABLE,
+            failure_notes="Customer was not available.",
+        )
+
+        statuses = list(
+            delivery.events.values_list("status", flat=True)
+        )
+
+        self.assertEqual(
+            statuses,
+            [
+                Delivery.Status.NEW,
+                Delivery.Status.ASSIGNED,
+                Delivery.Status.DELIVERY_FAILED,
+            ],
+        )
