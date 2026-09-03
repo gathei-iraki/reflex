@@ -349,3 +349,72 @@ class Member4AccessControlTests(TestCase):
             response.status_code,
             200,
         )
+    def test_wrong_rider_cannot_pick_up_delivery_via_api(self):
+        """A rider should not update another rider's delivery through the API."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        # Amina becomes the selected session member.
+        session = self.client.session
+        session["team_member_id"] = self.rider_amina.id
+        session.save()
+
+        url = reverse(
+            "deliveries:pick-up-delivery",
+            kwargs={"delivery_id": self.delivery.id},
+        )
+
+        response = self.client.post(url)
+
+        self.assertEqual(
+            response.status_code,
+            400,
+        )
+
+        # Confirm the unauthorized attempt did NOT change the delivery.
+        self.delivery.refresh_from_db()
+
+        self.assertEqual(
+            self.delivery.status,
+            Delivery.Status.ASSIGNED,
+        )
+
+        self.assertEqual(
+            self.delivery.assigned_rider,
+            self.rider_peter,
+        )
+    def test_assigned_rider_can_pick_up_delivery_via_api(self):
+        """The assigned rider should be able to pick up their delivery through the API."""
+
+        assign_rider(
+            delivery_id=self.delivery.id,
+            rider=self.rider_peter,
+            dispatcher=self.dispatcher,
+        )
+
+        session = self.client.session
+        session["team_member_id"] = self.rider_peter.id
+        session.save()
+
+        url = reverse(
+            "deliveries:pick-up-delivery",
+            kwargs={"delivery_id": self.delivery.id},
+        )
+
+        response = self.client.post(url)
+
+        self.assertEqual(
+            response.status_code,
+            200,
+        )
+
+        self.delivery.refresh_from_db()
+
+        self.assertEqual(
+            self.delivery.status,
+            Delivery.Status.PICKED_UP,
+        )
