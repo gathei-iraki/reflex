@@ -199,7 +199,23 @@ export default function RiderDashboard() {
                 placeholder="Add delivery failure details"
               />
             </label>
-            <SubmitButtons busy={busyDeliveryId === action.delivery.id} onCancel={() => setAction(null)} submitLabel="Confirm failure" danger />
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setAction(null)}
+                disabled={busyDeliveryId === action.delivery.id}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busyDeliveryId === action.delivery.id}
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {busyDeliveryId === action.delivery.id ? 'Saving…' : 'Confirm failure'}
+              </button>
+            </div>
           </form>
         </ActionModal>
       )}
@@ -209,8 +225,8 @@ export default function RiderDashboard() {
 
 function ActionModal({ children, onClose, title }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-5" onMouseDown={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/50 p-5" onMouseDown={onClose}>
+      <div className="mx-auto my-8 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
         <h2 className="mb-5 text-lg font-bold">{title}</h2>
         {children}
       </div>
