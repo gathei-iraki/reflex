@@ -1,156 +1,186 @@
-// src/member2/DispatcherDashboard.jsx
-import React, { useState } from 'react';
-import { initialDeliveries, initialRiders } from '../shared/mockData';
+import { useEffect, useState } from 'react'
+import {
+  assignRider,
+  getNewDeliveries,
+  getRiderWorkload,
+} from '../services/api'
 
-export default function DispatcherDashboard() {
-  const [deliveries, setDeliveries] = useState(initialDeliveries);
-  const [riders, setRiders] = useState(initialRiders);
-  const [filter, setFilter] = useState('ALL'); 
-  const [assigningDelivery, setAssigningDelivery] = useState(null);
-  const [editingAddress, setEditingAddress] = useState(null);
+export default function DispatcherDashboard({
+  onSwitchRole,
+  onGoToRetailer,
+}) {
+  const [deliveries, setDeliveries] = useState([])
+  const [riders, setRiders] = useState([])
+  const [selectedDelivery, setSelectedDelivery] = useState(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const filteredDeliveries = filter === 'ALL' ? deliveries : deliveries.filter(d => d.status === filter);
+  const loadDashboard = async () => {
+    try {
+      setLoading(true)
+      setError('')
 
-  // --- Rider Assignment Logic ---
-  const handleAssignRider = (riderId) => {
-    const rider = riders.find(r => r.id === riderId);
-    setDeliveries(deliveries.map(d => {
-      if (d.id === assigningDelivery.id) {
-        return { 
-          ...d, 
-          status: 'ASSIGNED', 
-          assignedRiderId: riderId,
-          timeline: [...d.timeline, { event: `Rider Assigned (${rider.name})`, timestamp: new Date().toISOString() }]
-        };
-      }
-      return d;
-    }));
-    // Update workload
-    setRiders(riders.map(r => r.id === riderId ? { ...r, activeWorkload: r.activeWorkload + 1 } : r));
-    setAssigningDelivery(null);
-  };
+      const [deliveryData, riderData] = await Promise.all([
+        getNewDeliveries(),
+        getRiderWorkload(),
+      ])
 
-  // --- Edge Case 2: Correcting Wrong Address ---
-  const handleEditAddress = (newAddress) => {
-    setDeliveries(deliveries.map(d => {
-      if (d.id === editingAddress.id) {
-        return { 
-          ...d, 
-          address: newAddress, 
-          status: 'NEW', // Reset to NEW for reassignment
-          failureReason: null,
-          timeline: [...d.timeline, { event: `Address Corrected by Dispatcher`, timestamp: new Date().toISOString() }]
-        };
-      }
-      return d;
-    }));
-    setEditingAddress(null);
-  };
+      setDeliveries(deliveryData)
+      setRiders(riderData)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard()
+  }, [])
+
+  const handleAssign = async (riderId) => {
+    try {
+      await assignRider(selectedDelivery.id, riderId)
+      setSelectedDelivery(null)
+      await loadDashboard()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Dispatcher Dashboard</h2>
+    <main className="min-h-screen bg-slate-50 px-5 py-8 text-slate-900">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-8 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-violet-600">
+              DISPATCHER WORKSPACE
+            </p>
+            <h1 className="mt-1 text-3xl font-bold">Assign deliveries</h1>
+            <p className="mt-2 text-slate-500">
+              Assign each new delivery to an available rider.
+            </p>
+          </div>
+<div className="flex gap-2">
+  <button
+    onClick={onGoToRetailer}
+    className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+  >
+    Main dashboard
+  </button>
 
-      {/* --- Filtering (Should Have) --- */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        {['ALL', 'NEW', 'ASSIGNED', 'PICKED_UP', 'DELIVERED', 'DELIVERY_FAILED'].map(status => (
-          <button 
-            key={status} 
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 rounded whitespace-nowrap ${filter === status ? 'bg-blue-600 text-white' : 'bg-white border hover:bg-gray-100'}`}
-          >
-            {status.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
+  <button
+    onClick={onSwitchRole}
+    className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200"
+  >
+    Switch role
+  </button>
+</div>
+          
+        </header>
 
-      {/* --- Rider Workload Indicator (Sidebar/Widget) --- */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <h3 className="font-semibold mb-2">Rider Workload Indicator</h3>
-        <div className="flex gap-4">
-          {riders.map(rider => (
-            <div key={rider.id} className={`px-3 py-1 rounded text-sm ${rider.activeWorkload > 4 ? 'bg-red-100 text-red-800' : rider.activeWorkload > 2 ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-              {rider.name} — {rider.activeWorkload} active
-            </div>
-          ))}
-        </div>
-      </div>
+        {error && (
+          <p className="mb-5 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            {error}
+          </p>
+        )}
 
-      {/* --- Deliveries List --- */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID / Customer</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredDeliveries.map(del => (
-              <tr key={del.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm">
-                  <div className="font-medium">{del.id}</div>
-                  <div className="text-gray-500 text-xs">{del.customerName}</div>
-                </td>
-                <td className="px-4 py-3 text-sm">{del.address}</td>
-                <td className="px-4 py-3 text-sm">
-                  <span className={`px-2 py-1 rounded text-xs ${del.status === 'DELIVERY_FAILED' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                    {del.status}
-                  </span>
-                  {del.failureReason && <div className="text-red-600 text-xs mt-1">Reason: {del.failureReason}</div>}
-                </td>
-                <td className="px-4 py-3 text-sm space-x-2">
-                  {/* Edge Case 5: Prevent duplicate assignment */}
-                  {del.status === 'NEW' && (
-                    <button onClick={() => setAssigningDelivery(del)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">Assign Rider</button>
-                  )}
-                  {/* Edge Case 2: Fix wrong address */}
-                  {del.status === 'DELIVERY_FAILED' && del.failureReason === 'Wrong address' && (
-                    <button onClick={() => setEditingAddress(del)} className="bg-yellow-600 text-white px-3 py-1 rounded text-xs hover:bg-yellow-700">Edit Address & Retry</button>
-                  )}
-                </td>
-              </tr>
+        <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+          <h2 className="font-bold">Rider workload</h2>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            {riders.map((rider) => (
+              <div
+                key={rider.id}
+                className="rounded-xl bg-slate-100 px-4 py-3 text-sm"
+              >
+                <p className="font-semibold">{rider.name}</p>
+                <p className="text-slate-500">
+                  {rider.active_deliveries} active deliveries
+                </p>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="border-b border-slate-100 p-5">
+            <h2 className="font-bold">New deliveries ({deliveries.length})</h2>
+          </div>
+
+          {loading ? (
+            <p className="p-6 text-sm text-slate-500">Loading deliveries…</p>
+          ) : deliveries.length === 0 ? (
+            <p className="p-6 text-sm text-slate-500">
+              No new deliveries are waiting for assignment.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {deliveries.map((delivery) => (
+                <div
+                  key={delivery.id}
+                  className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center"
+                >
+                  <div>
+                    <p className="font-semibold">{delivery.customer_name}</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {delivery.delivery_address}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {delivery.item_description}
+                    </p>
+                    <p className="mt-2 text-xs font-medium text-slate-400">
+                      Delivery #{delivery.id}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedDelivery(delivery)}
+                    className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700"
+                  >
+                    Assign rider
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* --- Modals --- */}
-      {assigningDelivery && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Assign Rider to {assigningDelivery.id}</h3>
-            <div className="space-y-2">
-              {riders.map(rider => (
-                <button 
-                  key={rider.id} 
-                  onClick={() => handleAssignRider(rider.id)}
-                  className="w-full text-left p-3 border rounded hover:bg-blue-50 flex justify-between"
+      {selectedDelivery && (
+        <div className="fixed inset-0 grid place-items-center bg-slate-950/40 p-5">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold">
+              Assign delivery #{selectedDelivery.id}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Choose an active rider.
+            </p>
+
+            <div className="mt-5 space-y-2">
+              {riders.map((rider) => (
+                <button
+                  key={rider.id}
+                  onClick={() => handleAssign(rider.id)}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 p-4 text-left hover:bg-violet-50"
                 >
-                  <span>{rider.name}</span>
-                  <span className="text-sm text-gray-500">{rider.activeWorkload} active</span>
+                  <span className="font-semibold">{rider.name}</span>
+                  <span className="text-sm text-slate-500">
+                    {rider.active_deliveries} active
+                  </span>
                 </button>
               ))}
             </div>
-            <button onClick={() => setAssigningDelivery(null)} className="mt-4 w-full text-gray-500">Cancel</button>
-          </div>
-        </div>
-      )}
 
-      {editingAddress && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Correct Address for {editingAddress.id}</h3>
-            <form onSubmit={(e) => { e.preventDefault(); handleEditAddress(e.target.newAddress.value); }}>
-              <input name="newAddress" defaultValue={editingAddress.address} className="w-full border p-2 rounded mb-4" required />
-              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">Save & Reset to NEW</button>
-            </form>
-            <button onClick={() => setEditingAddress(null)} className="mt-2 w-full text-gray-500">Cancel</button>
+            <button
+              onClick={() => setSelectedDelivery(null)}
+              className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
-    </div>
-  );
+    </main>
+  )
 }
