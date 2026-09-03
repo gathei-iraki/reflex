@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: reflex
+    runtime: python
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: gunicorn reflex.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/team-members/
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reflex-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
+databases:
+  - name: reflex-db
+    plan: free
